@@ -9,7 +9,7 @@ class RBM:
     self.hidden_size = hidden_size
     self.learning_rate = learning_rate
 
-    self.vectorized_sample = np.vectorize(RBM.sample)
+    self.vectorized_sample = np.vectorize(RBM.sample_bernoulli)
 
     if X is not None:
       self.train(X)
@@ -58,9 +58,13 @@ class RBM:
     return visible, hidden
 
   @staticmethod
-  def sample(activation):
+  def sample_bernoulli(activation):
     if logistic.cdf(activation) >= random.random():
       return 1
     else:
       return 0
+
+  @staticmethod
+  def sample_gaussian(activation):
+    pass
 
