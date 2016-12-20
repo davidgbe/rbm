@@ -25,12 +25,14 @@ class RBM:
     self.hidden_biases = np.random.rand(self.hidden_size)
 
     for i in range(num_examples):
-      self.train_example(np.array(X[i]))
+      self.train_example(X[i])
 
   def transform(self, X):
     num_examples = X.shape[0]
     transformed = []
     for i in range(num_examples):
+      if i % 100 == 0:
+        print i
       transformed.append(self.compute_hidden(X[i]))
     return np.mat(transformed)
 
