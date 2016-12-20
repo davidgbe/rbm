@@ -25,7 +25,7 @@ class RBM:
     self.hidden_biases = np.random.rand(self.hidden_size)
 
     for i in range(num_examples):
-      self.train_example(X[i])
+      self.train_example(np.array(X[i]))
 
   def transform(self, X):
     num_examples = X.shape[0]
@@ -35,12 +35,12 @@ class RBM:
     return np.mat(transformed)
 
   def compute_hidden(self, visible):
-    return self.vectorized_sample_bernoulli(np.dot(self.weights.transpose(), visible) + self.hidden_biases)
+    return self.vectorized_sample_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
 
   def compute_visible(self, hidden):
-    return self.vectorized_sample_gaussian(np.dot(self.weights, hidden) + self.visible_biases)
+    return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases)
 
-  def train_example(self, visible): 
+  def train_example(self, visible):
     hidden = self.compute_hidden(visible) 
 
     (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden)
