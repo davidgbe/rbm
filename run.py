@@ -1,5 +1,4 @@
 from components.rbm import RBM
-from components import utilities
 import numpy as np
 
 mat = np.random.rand(15, 4)
