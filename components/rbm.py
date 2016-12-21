@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats import logistic
 import random
 import utilities
+import time
 
 class RBM:
   def __init__(self, hidden_size = 20, X=None, learning_rate = .05):
@@ -21,18 +22,19 @@ class RBM:
     (num_examples, visible_size) = X.shape
 
     self.weights = np.random.rand(visible_size, self.hidden_size)
-    self.visible_biases = np.random.rand(visible_size)
-    self.hidden_biases = np.random.rand(self.hidden_size)
+    self.visible_biases = np.random.rand(visible_size).reshape(visible_size, 1)
+    self.hidden_biases = np.random.rand(self.hidden_size).reshape(1, self.hidden_size)
 
+    start = time.time()
     for i in range(num_examples):
       self.train_example(X[i])
+      if i % 20 == 0:
+        print 'Trained %d examples in %d s' % (i, time.time() - start)
 
   def transform(self, X):
     num_examples = X.shape[0]
     transformed = []
     for i in range(num_examples):
-      if i % 100 == 0:
-        print i
       transformed.append(self.compute_hidden(X[i]))
     return np.mat(transformed)
 
@@ -40,17 +42,17 @@ class RBM:
     return self.vectorized_sample_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
 
   def compute_visible(self, hidden):
-    return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases)
+    return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases).transpose()
 
   def train_example(self, visible):
-    hidden = self.compute_hidden(visible) 
+    hidden = self.compute_hidden(visible)
 
     (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden)
 
     weight_update = self.learning_rate * (np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime))
     self.weights += weight_update
     self.hidden_biases += self.learning_rate * (hidden - hidden_prime)
-    self.visible_biases += self.learning_rate * (visible - visible_prime)
+    self.visible_biases += self.learning_rate * (visible - visible_prime).transpose()
 
   def gibbs_sample(self, visible, hidden, n=1):
     if n < 1:
