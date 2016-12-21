@@ -4,6 +4,7 @@ from scipy.stats import logistic
 import random
 import utilities
 import time
+import cPickle
 
 class RBM:
   def __init__(self, hidden_size = 20, X=None, learning_rate = .05):
@@ -30,6 +31,10 @@ class RBM:
       self.train_example(X[i])
       if i % 20 == 0:
         print 'Trained %d examples in %d s' % (i, time.time() - start)
+
+    RBM.save_weights('weights', self.weights)
+    RBM.save_weights('visible_biases', self.visible_biases)
+    RBM.save_weights('hidden_biases', self.hidden_biases)
 
   def transform(self, X):
     num_examples = X.shape[0]
@@ -71,4 +76,8 @@ class RBM:
   @staticmethod
   def sample_gaussian(activation):
     return np.random.normal(activation, 1.0, 1)
+
+  @staticmethod
+  def save_weights(name, obj):
+    cPickle.dump(obj, open('cached_weights/%s.p' % name, 'wb')) 
 
