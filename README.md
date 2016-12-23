@@ -1,5 +1,5 @@
 # Winter and Restricted Boltzmann Machines
-This repo is intended to be an experiment with restricted Boltzmann machines. Refer to [this](https://www.sharelatex.com/project/5859a108417621e64d7df371)
+This repo is intended to be an experiment with restricted Boltzmann machines. Refer to [THIS BLOG](https://www.sharelatex.com/project/5859a108417621e64d7df371)
 for real time progress updates and explanations of the math behind the model. The plan is as follows:
 
 1. Write a restricted Boltzmann machine :checkered_flag:
