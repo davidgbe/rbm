@@ -4,18 +4,24 @@ from scipy.stats import logistic
 import random
 import utilities
 import time
-import cPickle
+import cPickle as pickle
+import os
 
 class RBM:
-  def __init__(self, hidden_size = 20, X=None, learning_rate = .05):
-    self.hidden_size = hidden_size
-    self.learning_rate = learning_rate
-
+  def __init__(self, hidden_size=20, X=None, learning_rate=.05, cached_weights_path=None):
     self.vectorized_sample_bernoulli = np.vectorize(RBM.sample_bernoulli)
     self.vectorized_sample_gaussian = np.vectorize(RBM.sample_gaussian)
 
-    if X is not None:
-      self.train(X)
+    if cached_weights_path is not None:
+      for model_param in ['weights', 'hidden_biases', 'visible_biases']:
+        saved_param_path = os.path.join(cached_weights_path, '%s.p' % model_param)
+        self.__dict__[model_param] = pickle.load(open(saved_param_path, 'rb'))
+    else:
+      self.hidden_size = hidden_size
+      self.learning_rate = learning_rate
+
+      if X is not None:
+        self.train(X)
 
   def train(self, X):
     X = utilities.normalize(X)
@@ -36,12 +42,22 @@ class RBM:
     RBM.save_weights('visible_biases', self.visible_biases)
     RBM.save_weights('hidden_biases', self.hidden_biases)
 
-  def transform(self, X):
-    num_examples = X.shape[0]
-    transformed = []
+  def transform_to_hidden(self, X):
+    return self.transform(X, 'compute_hidden')
+
+  def transform_to_visible(self, Y):
+    return self.transform(Y, 'compute_visible')
+
+  def transform(self, data, transform_func_name):
+    num_examples = data.shape[0]
+    transformed = None
+    transform_func = getattr(self, transform_func_name)
     for i in range(num_examples):
-      transformed.append(self.compute_hidden(X[i]))
-    return np.mat(transformed)
+      if transformed is None:
+        transformed = transform_func(data[i])
+      else:
+        transformed = np.concatenate((transformed, transform_func(data[i])), axis=0)
+    return transformed
 
   def compute_hidden(self, visible):
     return self.vectorized_sample_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
@@ -79,5 +95,4 @@ class RBM:
 
   @staticmethod
   def save_weights(name, obj):
-    cPickle.dump(obj, open('cached_weights/%s.p' % name, 'wb')) 
-
+    pickle.dump(obj, open('cached_weights/%s.p' % name, 'wb')) 
