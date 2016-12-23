@@ -15,3 +15,15 @@ for real time progress updates and explanations of the math behind the model. Th
 1. Build an alternative version of the RBM that is descriminative as opposed to generative
 
 1. Try to use RBM to classify Alzheimer's patients from [this data](https://www.kaggle.com/jesseab/alzheimers-mri-deep-learning)
+
+## References
+
+1. https://www.cs.toronto.edu/~hinton/absps/guideTR.pdf
+
+1. http://www.robots.ox.ac.uk/~ojw/files/NotesOnCD.pdf
+
+1. http://www.jmlr.org/papers/volume13/larochelle12a/larochelle12a.pdf
+
+1. http://www.cs.toronto.edu/~hinton/absps/fastnc.pdf
+
+1. http://www.vision.cs.chubu.ac.jp/MPRG/C_group/C060_yamashita2014.pdf
