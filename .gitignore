@@ -6,4 +6,4 @@ pip-selfcheck.json
 datasets
 images/*.png
 cached_weights/*.p
-./**/*.pyc
+**/*.pyc

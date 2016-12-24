@@ -2,15 +2,15 @@ import os
 import struct
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 from components.rbm import RBM
+from components import utilities
 import time
 import sys
-from components import utilities
+from sklearn.svm import SVC
 
 class MNISTTrainer:
   @staticmethod
-  def train():
+  def train_rbm():
     images = MNISTTrainer.load_images_dataset('../datasets/mnist/train-images-idx3-ubyte')
     print 'Training...'
     start = time.time()
@@ -19,17 +19,30 @@ class MNISTTrainer:
     print 'Finished training in %d s' % (end - start)
 
   @staticmethod
-  def load():
+  def train_svm():
+    rbm = MNISTTrainer.rbm_with_saved_weights()
+    X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/train-images-idx3-ubyte')
+    Y = MNISTTrainer.load_labels('../datasets/mnist/train-labels-idx3-ubyte')
+    print 'Training SVM...'
+    start = time.time()
+    svm = SVC()
+    svm.fit(X, Y)
+    print 'Finished training SVM in %d s' % (time.time() - start)
+    return svm
+
+  @staticmethod
+  def rbm_with_saved_weights():
     return RBM(cached_weights_path=utilities.file_path(__file__, '../cached_weights'))
 
   @staticmethod
-  def transform(rbm):
-    images = MNISTTrainer.load_images_dataset('../datasets/mnist/t10k-images-idx3-ubyte')
-    print 'Predicting'
+  def transform_with_rbm(rbm, data_path):
+    images = MNISTTrainer.load_images_dataset(data_path)
+    print 'Transforming...'
     start = time.time()
-    print rbm.transform_to_hidden(images)
+    result =  rbm.transform_to_hidden(images)
     end = time.time()
     print 'Finished transforming in %d s' % (end - start)
+    return result
 
   @staticmethod
   def load_labels(rel_path):
@@ -45,9 +58,8 @@ class MNISTTrainer:
     labels = vec_func(np.array(labels))
 
     end = time.time()
-    print 'Finished transforming in %d s' % (end - start)
-
-    print labels
+    print 'Finished loading labels in %d s' % (end - start)
+    return labels
 
   @staticmethod
   def load_images_dataset(rel_path):
@@ -67,7 +79,6 @@ class MNISTTrainer:
 
     end = time.time()
     print 'Images loaded in %d s' % (end - start)
-
     return raw_images
 
   @staticmethod
@@ -87,20 +98,16 @@ class MNISTTrainer:
   @staticmethod
   def save_images(images, rows, cols):
     for i in range(images.shape[0]):
-      MNISTTrainer.save_image(images[i].reshape(rows, cols), i)
-
-  @staticmethod
-  def save_image(image_data, name):
-    plt.imshow(image_data, interpolation='nearest', cmap='gray')
-    plt.savefig(utilities.file_path(__file__, '../images/img_%d.png' % name))
+      utilities.save_image(images[i].reshape(rows, cols), 'img_' + i)
 
   @staticmethod
   def convert_to_unsigned_int(char):
     return 0 if char == '' else ord(char)
 
 if __name__ == '__main__':
-  if len(sys.argv) > 1 and sys.argv[1] == '-l':
-    #MNISTTrainer.load_labels('../datasets/mnist/t10k-labels-idx1-ubyte')
-    MNISTTrainer.transform(MNISTTrainer.load())
-  else:
-    MNISTTrainer.train()
+  if len(sys.argv) > 1:
+    command = sys.argv[1]
+    if command == 'predict':
+      svm = MNISTTrainer.train_svm()
+    elif command == 'train':
+      MNISTTrainer.train_rbm()

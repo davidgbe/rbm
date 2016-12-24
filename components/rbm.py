@@ -8,7 +8,7 @@ import cPickle as pickle
 import os
 
 class RBM:
-  def __init__(self, hidden_size=20, X=None, learning_rate=.05, cached_weights_path=None):
+  def __init__(self, hidden_size=20, X=None, cached_weights_path=None):
     self.vectorized_sample_bernoulli = np.vectorize(RBM.sample_bernoulli)
     self.vectorized_sample_gaussian = np.vectorize(RBM.sample_gaussian)
 
@@ -16,10 +16,11 @@ class RBM:
       for model_param in ['weights', 'hidden_biases', 'visible_biases']:
         saved_param_path = os.path.join(cached_weights_path, '%s.p' % model_param)
         self.__dict__[model_param] = pickle.load(open(saved_param_path, 'rb'))
-        print self.__dict__[model_param]
+      utilities.save_image(self.visible_biases.reshape(28, 28), 'visible_biases')
+      for i in range(self.weights.shape[1]):
+        utilities.save_image(self.weights[:, i].reshape(28, 28), 'weights_%d' % i)
     else:
       self.hidden_size = hidden_size
-      self.learning_rate = learning_rate
 
       if X is not None:
         self.train(X)
@@ -35,9 +36,13 @@ class RBM:
 
     start = time.time()
     for i in range(num_examples):
-      self.train_example(X[i])
       if i % 20 == 0:
         print 'Trained %d examples in %d s' % (i, time.time() - start)
+        if i % 100 == 0:
+          self.weights_learning_rate = self.weights.mean() / 1000.0
+          self.visible_biases_learning_rate = self.visible_biases.mean() / 100.0
+          self.hidden_biases_learning_rate = self.hidden_biases.mean() / 100.0
+      self.train_example(X[i])
 
     RBM.save_weights('weights', self.weights)
     RBM.save_weights('visible_biases', self.visible_biases)
@@ -71,10 +76,10 @@ class RBM:
 
     (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden)
 
-    weight_update = self.learning_rate * (np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime))
+    weight_update = self.weights_learning_rate * (np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime))
     self.weights += weight_update
-    self.hidden_biases += self.learning_rate * (hidden - hidden_prime)
-    self.visible_biases += self.learning_rate * (visible - visible_prime).transpose()
+    self.hidden_biases += self.hidden_biases_learning_rate * (hidden - hidden_prime)
+    self.visible_biases += self.visible_biases_learning_rate * (visible - visible_prime).transpose()
 
   def gibbs_sample(self, visible, hidden, n=1):
     if n < 1:
