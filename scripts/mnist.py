@@ -7,6 +7,7 @@ from components import utilities
 import time
 import sys
 from sklearn.svm import SVC
+from sklearn.metrics import classification_report
 
 class MNISTTrainer:
   @staticmethod
@@ -22,7 +23,7 @@ class MNISTTrainer:
   def train_svm():
     rbm = MNISTTrainer.rbm_with_saved_weights()
     X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/train-images-idx3-ubyte')
-    Y = MNISTTrainer.load_labels('../datasets/mnist/train-labels-idx3-ubyte')
+    Y = MNISTTrainer.load_labels('../datasets/mnist/train-labels-idx1-ubyte')
     print 'Training SVM...'
     start = time.time()
     svm = SVC()
@@ -109,5 +110,12 @@ if __name__ == '__main__':
     command = sys.argv[1]
     if command == 'predict':
       svm = MNISTTrainer.train_svm()
+
+      X = MNISTTrainer.load_images_dataset('../datasets/mnist/t10k-images-idx3-ubyte')
+      Y = MNISTTrainer.load_labels('../datasets/mnist/t10k-labels-idx1-ubyte')
+
+      predictions = svm.predict(X)
+      print classification_report(Y, predictions)
+
     elif command == 'train':
       MNISTTrainer.train_rbm()

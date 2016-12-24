@@ -59,6 +59,7 @@ class RBM:
     transformed = None
     transform_func = getattr(self, transform_func_name)
     for i in range(num_examples):
+      print '%d' % i
       if transformed is None:
         transformed = transform_func(data[i])
       else:
