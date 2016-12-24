@@ -16,6 +16,7 @@ class RBM:
       for model_param in ['weights', 'hidden_biases', 'visible_biases']:
         saved_param_path = os.path.join(cached_weights_path, '%s.p' % model_param)
         self.__dict__[model_param] = pickle.load(open(saved_param_path, 'rb'))
+        print self.__dict__[model_param]
     else:
       self.hidden_size = hidden_size
       self.learning_rate = learning_rate
@@ -28,9 +29,9 @@ class RBM:
 
     (num_examples, visible_size) = X.shape
 
-    self.weights = np.random.rand(visible_size, self.hidden_size)
-    self.visible_biases = np.random.rand(visible_size).reshape(visible_size, 1)
-    self.hidden_biases = np.random.rand(self.hidden_size).reshape(1, self.hidden_size)
+    self.weights = RBM.generate_weight_vector(visible_size * self.hidden_size).reshape(visible_size, self.hidden_size)
+    self.visible_biases = RBM.generate_weight_vector(visible_size).reshape(visible_size, 1)
+    self.hidden_biases = RBM.generate_weight_vector(self.hidden_size).reshape(1, self.hidden_size)
 
     start = time.time()
     for i in range(num_examples):
@@ -95,4 +96,8 @@ class RBM:
 
   @staticmethod
   def save_weights(name, obj):
-    pickle.dump(obj, open('cached_weights/%s.p' % name, 'wb')) 
+    pickle.dump(obj, open('cached_weights/%s.p' % name, 'wb'))
+
+  @staticmethod
+  def generate_weight_vector(size):
+    return np.random.normal(0, 0.01, size)

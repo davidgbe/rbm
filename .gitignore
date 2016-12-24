@@ -4,4 +4,6 @@ lib
 pip-selfcheck.json
 .Python
 datasets
-images/*
+images/*.png
+cached_weights/*.p
+./**/*.pyc
