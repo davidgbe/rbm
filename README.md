@@ -6,11 +6,13 @@ for real time progress updates and explanations of the math behind the model. Th
 
 1. Train model on data from the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) :checkered_flag:
 
-1. Tune model until it's clear that learned features of MNIST dataset aptly represent the image data
+1. Tune model until it's clear that learned features of MNIST dataset aptly represent the image data :checkered_flag:
+
+1. Check to see if alternate representation learned by RBM is more useful than raw image data
 
 ## Tentative plans
 
-1. Build SVM that classifies MNIST dataset based on features learned by RBM
+1. Use SVM to classify MNIST dataset based on features learned by RBM :checkered_flag:
 
 1. Build an alternative version of the RBM that is descriminative as opposed to generative
 
