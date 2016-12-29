@@ -15,29 +15,47 @@ class MNISTTrainer:
     images = MNISTTrainer.load_images_dataset('../datasets/mnist/train-images-idx3-ubyte')
     print 'Training...'
     start = time.time()
-    rbm = RBM(X=images)
+    rbm = RBM()
+    rbm.train(images[:100], epochs=200)
     end = time.time()
     print 'Finished training in %d s' % (end - start)
 
   @staticmethod
-  def train_svm():
+  def reconstruction_test():
     rbm = MNISTTrainer.rbm_with_saved_weights()
-    X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/train-images-idx3-ubyte')
-    Y = MNISTTrainer.load_labels('../datasets/mnist/train-labels-idx1-ubyte')
+    X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/train-images-idx3-ubyte', limit=100)
+    reconstruction = rbm.transform_to_visible(X)
+    reconstruction = utilities.to_grayscale(reconstruction)
+    MNISTTrainer.save_images(reconstruction, 28, 28, prefix='recon_')
+
+  @staticmethod
+  def train_and_predict_svm():
+    rbm = MNISTTrainer.rbm_with_saved_weights()
+    train_X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/train-images-idx3-ubyte')
+    train_Y = MNISTTrainer.load_labels('../datasets/mnist/train-labels-idx1-ubyte')
     print 'Training SVM...'
     start = time.time()
     svm = SVC()
-    svm.fit(X, Y)
+    svm.fit(train_X, train_Y)
     print 'Finished training SVM in %d s' % (time.time() - start)
-    return svm
+    X = MNISTTrainer.transform_with_rbm(rbm, '../datasets/mnist/t10k-images-idx3-ubyte')
+    Y = MNISTTrainer.load_labels('../datasets/mnist/t10k-labels-idx1-ubyte')
+
+    predictions = svm.predict(X)
+    print classification_report(Y, predictions)
 
   @staticmethod
   def rbm_with_saved_weights():
     return RBM(cached_weights_path=utilities.file_path(__file__, '../cached_weights'))
 
   @staticmethod
-  def transform_with_rbm(rbm, data_path):
+  def transform_with_rbm(rbm, data_path, limit=None):
     images = MNISTTrainer.load_images_dataset(data_path)
+    if limit is not None:
+      if limit < 1:
+        raise ValueError('Limit must be greater than 0')
+      else:
+        images = images[:limit]
     print 'Transforming...'
     start = time.time()
     result =  rbm.transform_to_hidden(images)
@@ -76,7 +94,7 @@ class MNISTTrainer:
 
     raw_images = MNISTTrainer.read_bytes(images_file, num_examples * rows * cols)
     vec_func = np.vectorize(MNISTTrainer.convert_to_unsigned_int)
-    raw_images = np.mat([ vec_func(np.array(raw_images[i:i + rows * cols])) for i in xrange(0, len(raw_images), rows * cols)])
+    raw_images = np.mat([ vec_func(np.array(raw_images[i:i + rows * cols])) for i in xrange(0, len(raw_images), rows * cols) ])
 
     end = time.time()
     print 'Images loaded in %d s' % (end - start)
@@ -97,9 +115,9 @@ class MNISTTrainer:
     return struct.unpack('>'  + format * output_size, bytes_read)
 
   @staticmethod
-  def save_images(images, rows, cols):
+  def save_images(images, rows, cols, prefix='img_'):
     for i in range(images.shape[0]):
-      utilities.save_image(images[i].reshape(rows, cols), 'img_' + i)
+      utilities.save_image(images[i].reshape(rows, cols), prefix + str(i))
 
   @staticmethod
   def convert_to_unsigned_int(char):
@@ -109,13 +127,8 @@ if __name__ == '__main__':
   if len(sys.argv) > 1:
     command = sys.argv[1]
     if command == 'predict':
-      svm = MNISTTrainer.train_svm()
-
-      X = MNISTTrainer.load_images_dataset('../datasets/mnist/t10k-images-idx3-ubyte')
-      Y = MNISTTrainer.load_labels('../datasets/mnist/t10k-labels-idx1-ubyte')
-
-      predictions = svm.predict(X)
-      print classification_report(Y, predictions)
-
+      MNISTTrainer.train_and_predict_svm()
     elif command == 'train':
       MNISTTrainer.train_rbm()
+    elif command == 'reconstruction_test':
+      MNISTTrainer.reconstruction_test()

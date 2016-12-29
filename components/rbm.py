@@ -10,7 +10,11 @@ import os
 class RBM:
   def __init__(self, hidden_size=20, X=None, cached_weights_path=None):
     self.vectorized_sample_bernoulli = np.vectorize(RBM.sample_bernoulli)
+    self.vectorized_bernoulli = np.vectorize(logistic.cdf)
     self.vectorized_sample_gaussian = np.vectorize(RBM.sample_gaussian)
+
+    self.visible_learning_rate = .002
+    self.hidden_learning_rate = .002
 
     if cached_weights_path is not None:
       for model_param in ['weights', 'hidden_biases', 'visible_biases']:
@@ -25,24 +29,32 @@ class RBM:
       if X is not None:
         self.train(X)
 
-  def train(self, X):
+  def train(self, X, epochs=40):
     X = utilities.normalize(X)
 
     (num_examples, visible_size) = X.shape
 
     self.weights = RBM.generate_weight_vector(visible_size * self.hidden_size).reshape(visible_size, self.hidden_size)
     self.visible_biases = RBM.generate_weight_vector(visible_size).reshape(visible_size, 1)
-    self.hidden_biases = RBM.generate_weight_vector(self.hidden_size).reshape(1, self.hidden_size)
+    self.hidden_biases = np.zeros(self.hidden_size).reshape(1, self.hidden_size)
+
+    self.weights_err_history = []
+    self.visible_biases_err_history = []
+    self.hidden_biases_err_history = []
 
     start = time.time()
-    for i in range(num_examples):
-      if i % 20 == 0:
-        print 'Trained %d examples in %d s' % (i, time.time() - start)
-        if i % 100 == 0:
-          self.weights_learning_rate = self.weights.mean() / 1000.0
-          self.visible_biases_learning_rate = self.visible_biases.mean() / 100.0
-          self.hidden_biases_learning_rate = self.hidden_biases.mean() / 100.0
-      self.train_example(X[i])
+    for e in range(epochs):
+      np.random.shuffle(X)
+      print 'EPOCH %d' % (e + 1)
+      for i in range(num_examples):
+        if i % 20 == 0:
+          print 'Trained %d examples in %d s' % (e * num_examples + i, time.time() - start)
+        self.train_example(X[i])
+
+      iterations = [k for k in range((e + 1) * num_examples)]
+      utilities.save_scatter(iterations, self.hidden_biases_err_history, 'hidden_err')
+      utilities.save_scatter(iterations, self.visible_biases_err_history, 'visible_err')
+      utilities.save_scatter(iterations, self.weights_err_history, 'weights_err')
 
     RBM.save_weights('weights', self.weights)
     RBM.save_weights('visible_biases', self.visible_biases)
@@ -50,6 +62,9 @@ class RBM:
 
   def transform_to_hidden(self, X):
     return self.transform(X, 'compute_hidden')
+
+  def transform_to_hidden_probabilities(self, X):
+    return self.transform(X, 'compute_hidden_probabilities')
 
   def transform_to_visible(self, Y):
     return self.transform(Y, 'compute_visible')
@@ -59,7 +74,8 @@ class RBM:
     transformed = None
     transform_func = getattr(self, transform_func_name)
     for i in range(num_examples):
-      print '%d' % i
+      if i % 100 == 0: 
+        print 'Transformed %d' % i
       if transformed is None:
         transformed = transform_func(data[i])
       else:
@@ -69,18 +85,30 @@ class RBM:
   def compute_hidden(self, visible):
     return self.vectorized_sample_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
 
+  def compute_hidden_probabilites(self, visible):
+    return self.vectorized_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
+
   def compute_visible(self, hidden):
     return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases).transpose()
 
-  def train_example(self, visible):
+  def train_example(self, visible, n=1):
     hidden = self.compute_hidden(visible)
 
-    (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden)
+    (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden, n=n)
 
-    weight_update = self.weights_learning_rate * (np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime))
-    self.weights += weight_update
-    self.hidden_biases += self.hidden_biases_learning_rate * (hidden - hidden_prime)
-    self.visible_biases += self.visible_biases_learning_rate * (visible - visible_prime).transpose()
+    weights_err = np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime)
+    hidden_biases_err = hidden - hidden_prime
+    visible_biases_err = (visible - visible_prime).transpose()
+
+    (visible_size, hidden_size) = self.weights.shape
+
+    self.hidden_biases_err_history.append(abs(hidden_biases_err.mean()))
+    self.visible_biases_err_history.append(abs(visible_biases_err.mean()))
+    self.weights_err_history.append(abs(weights_err.mean()))
+
+    self.weights += self.visible_learning_rate * weights_err
+    self.hidden_biases += self.hidden_learning_rate * hidden_biases_err
+    self.visible_biases += self.visible_learning_rate * visible_biases_err
 
   def gibbs_sample(self, visible, hidden, n=1):
     if n < 1:
@@ -88,7 +116,7 @@ class RBM:
 
     while n > 0:
       visible = self.compute_visible(hidden)
-      hidden = self.compute_hidden(visible)
+      hidden = self.compute_hidden_probabilites(visible)
       n -= 1
     return visible, hidden
 
