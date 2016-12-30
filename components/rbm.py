@@ -10,12 +10,13 @@ import os
 class RBM:
   def __init__(self, hidden_size=20, X=None, cached_weights_path=None):
     self.vectorized_sample_bernoulli = np.vectorize(RBM.sample_bernoulli)
-    self.vectorized_bernoulli = np.vectorize(logistic.cdf)
+    self.vectorized_bernoulli = np.vectorize(RBM.bernoulli)
     self.vectorized_sample_gaussian = np.vectorize(RBM.sample_gaussian)
 
-    self.visible_learning_rate = .005
+    self.weight_learning_rate = .001
     self.hidden_learning_rate = .001
-    self.momentum = 0.9
+    self.visible_learning_rate = .001
+    self.momentum = 0.5
 
     if cached_weights_path is not None:
       for model_param in ['weights', 'hidden_biases', 'visible_biases']:
@@ -54,10 +55,13 @@ class RBM:
           print 'Trained %d examples in %d s' % (e * num_examples + i, time.time() - start)
         prev_updates = self.train_example(X[i], prev_updates)
 
-      iterations = [k for k in range((e + 1) * num_examples)]
-      utilities.save_scatter(iterations, self.hidden_biases_err_history, 'hidden_err')
-      utilities.save_scatter(iterations, self.visible_biases_err_history, 'visible_err')
-      utilities.save_scatter(iterations, self.weights_err_history, 'weights_err')
+      bucket_size = 1
+      iterations = [k * bucket_size for k in range((e + 1) * num_examples / bucket_size)]
+      utilities.save_scatter(iterations, utilities.bucket(self.hidden_biases_err_history, bucket_size), 'hidden_err')
+      utilities.save_scatter(iterations, utilities.bucket(self.visible_biases_err_history, bucket_size), 'visible_err')
+      utilities.save_scatter(iterations, utilities.bucket(self.weights_err_history, bucket_size), 'weights_err')
+
+    utilities.save_image(self.visible_biases.reshape(28, 28), 'visible_biases')
 
     RBM.save_weights('weights', self.weights)
     RBM.save_weights('visible_biases', self.visible_biases)
@@ -92,7 +96,10 @@ class RBM:
     return self.vectorized_bernoulli(np.dot(visible, self.weights) + self.hidden_biases)
 
   def compute_visible(self, hidden):
-    return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases).transpose()
+    return self.vectorized_sample_gaussian(self.compute_visible_activations(hidden))
+
+  def compute_visible_activations(self, hidden):
+    return (np.dot(self.weights, hidden.transpose()) + self.visible_biases).transpose()
 
   def train_example(self, visible, prev_updates, n=1):
     (prev_weights_update, prev_hidden_biases_update, prev_visible_biases_update) = prev_updates
@@ -139,7 +146,11 @@ class RBM:
 
   @staticmethod
   def sample_bernoulli(activation):
-    return 1 if logistic.cdf(activation) >= random.random() else 0
+    return 1 if RBM.bernoulli(activation) >= random.random() else 0
+
+  @staticmethod
+  def bernoulli(activation):
+    return max(0.0, logistic.cdf(activation))
 
   @staticmethod
   def sample_gaussian(activation):

@@ -11,9 +11,8 @@ def normalize(mat):
     normed = np.nan_to_num(normed)
   return normed
 
-def to_grayscale(mat):
-  grayscale = mat * 255.0 / (mat.max() - mat.min())
-  return grayscale - grayscale.min()
+def to_grayscale(recon, original):
+  return np.multiply(recon, original.std(0)) + original.mean(0)
 
 def file_path(curr_file, *path_elements):
   dir = os.path.dirname(curr_file)
@@ -30,3 +29,6 @@ def save_scatter(X, Y, name):
   plt.plot(X, Y, 'ro')
   save_plot(name)
   plt.clf()
+
+def bucket(data, bucket_size):
+  return [ np.mean(data[i:i+bucket_size]) for i in range(0, len(data), bucket_size) ]
