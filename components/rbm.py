@@ -55,7 +55,7 @@ class RBM:
           print 'Trained %d examples in %d s' % (e * num_examples + i, time.time() - start)
         prev_updates = self.train_example(X[i], prev_updates)
 
-      bucket_size = 1
+      bucket_size = 1000
       iterations = [k * bucket_size for k in range((e + 1) * num_examples / bucket_size)]
       utilities.save_scatter(iterations, utilities.bucket(self.hidden_biases_err_history, bucket_size), 'hidden_err')
       utilities.save_scatter(iterations, utilities.bucket(self.visible_biases_err_history, bucket_size), 'visible_err')
