@@ -16,7 +16,7 @@ class MNISTTrainer:
     print 'Training...'
     start = time.time()
     rbm = RBM()
-    rbm.train(images[:100], epochs=200)
+    rbm.train(images, epochs=40)
     end = time.time()
     print 'Finished training in %d s' % (end - start)
 

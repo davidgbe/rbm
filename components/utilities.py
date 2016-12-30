@@ -27,6 +27,6 @@ def save_image(image_data, name):
   save_plot(name)
 
 def save_scatter(X, Y, name):
-  plt.plot(X, Y)
+  plt.plot(X, Y, 'ro')
   save_plot(name)
   plt.clf()

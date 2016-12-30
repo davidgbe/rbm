@@ -13,8 +13,9 @@ class RBM:
     self.vectorized_bernoulli = np.vectorize(logistic.cdf)
     self.vectorized_sample_gaussian = np.vectorize(RBM.sample_gaussian)
 
-    self.visible_learning_rate = .002
-    self.hidden_learning_rate = .002
+    self.visible_learning_rate = .005
+    self.hidden_learning_rate = .001
+    self.momentum = 0.9
 
     if cached_weights_path is not None:
       for model_param in ['weights', 'hidden_biases', 'visible_biases']:
@@ -42,14 +43,16 @@ class RBM:
     self.visible_biases_err_history = []
     self.hidden_biases_err_history = []
 
+    prev_updates = (0, 0, 0)
+
     start = time.time()
     for e in range(epochs):
       np.random.shuffle(X)
       print 'EPOCH %d' % (e + 1)
       for i in range(num_examples):
-        if i % 20 == 0:
+        if i % 1000 == 0:
           print 'Trained %d examples in %d s' % (e * num_examples + i, time.time() - start)
-        self.train_example(X[i])
+        prev_updates = self.train_example(X[i], prev_updates)
 
       iterations = [k for k in range((e + 1) * num_examples)]
       utilities.save_scatter(iterations, self.hidden_biases_err_history, 'hidden_err')
@@ -91,24 +94,38 @@ class RBM:
   def compute_visible(self, hidden):
     return self.vectorized_sample_gaussian(np.dot(self.weights, hidden.transpose()) + self.visible_biases).transpose()
 
-  def train_example(self, visible, n=1):
+  def train_example(self, visible, prev_updates, n=1):
+    (prev_weights_update, prev_hidden_biases_update, prev_visible_biases_update) = prev_updates
+
+    # Compute hidden vector using visible vector
     hidden = self.compute_hidden(visible)
 
+    # Compute visible and hidden reconstructions
     (visible_prime, hidden_prime) = self.gibbs_sample(visible, hidden, n=n)
 
-    weights_err = np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime)
-    hidden_biases_err = hidden - hidden_prime
-    visible_biases_err = (visible - visible_prime).transpose()
+    # Compute reconstruction error using contrastive divergence
+    weights_errs = np.outer(visible, hidden) - np.outer(visible_prime, hidden_prime)
+    hidden_biases_errs = hidden - hidden_prime
+    visible_biases_errs = (visible - visible_prime).transpose()
 
     (visible_size, hidden_size) = self.weights.shape
 
-    self.hidden_biases_err_history.append(abs(hidden_biases_err.mean()))
-    self.visible_biases_err_history.append(abs(visible_biases_err.mean()))
-    self.weights_err_history.append(abs(weights_err.mean()))
+    # Add squared errors to error history to be graphed
+    self.weights_err_history.append(RBM.squared_err(weights_errs))
+    self.hidden_biases_err_history.append(RBM.squared_err(hidden_biases_errs))
+    self.visible_biases_err_history.append(RBM.squared_err(visible_biases_errs))
 
-    self.weights += self.visible_learning_rate * weights_err
-    self.hidden_biases += self.hidden_learning_rate * hidden_biases_err
-    self.visible_biases += self.visible_learning_rate * visible_biases_err
+    # Compute updates to weights and biases
+    weights_update = self.visible_learning_rate * weights_errs
+    hidden_biases_update = self.hidden_learning_rate * hidden_biases_errs
+    visible_biases_update = self.visible_learning_rate * visible_biases_errs
+
+    # Update weights and biases using computed updates and momentum terms
+    self.weights += (weights_update + self.momentum * prev_weights_update)
+    self.hidden_biases += (hidden_biases_update + self.momentum * prev_hidden_biases_update)
+    self.visible_biases += (visible_biases_update + self.momentum * prev_visible_biases_update)
+
+    return (weights_update, hidden_biases_update, visible_biases_update)
 
   def gibbs_sample(self, visible, hidden, n=1):
     if n < 1:
@@ -135,3 +152,7 @@ class RBM:
   @staticmethod
   def generate_weight_vector(size):
     return np.random.normal(0, 0.01, size)
+
+  @staticmethod
+  def squared_err(err_vec):
+    return np.sum(np.square(err_vec))
