@@ -14,8 +14,6 @@ for real time progress updates and explanations of the math behind the model. Th
 
 1. Use SVM to classify MNIST dataset based on features learned by RBM :checkered_flag:
 
-1. Build an alternative version of the RBM that is descriminative as opposed to generative
-
 1. Try to use RBM to classify Alzheimer's patients from [this data](https://www.kaggle.com/jesseab/alzheimers-mri-deep-learning)
 
 ## References
